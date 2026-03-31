@@ -1,24 +1,714 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChainTrack UI</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChainTrack — Blockchain Supply Chain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --border: #1e2330;
+      --accent: #00e5ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --card: #13161f;
+      --glow: 0 0 24px rgba(0,229,255,0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,12,16,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .logo span { color: var(--accent); }
+
+    .chain-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .chain-status .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent3);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .stat-value { font-family: 'Space Mono', monospace; font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+    .stat-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.5rem;
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+
+    /* ── FORM ── */
+    .form-section { padding: 1.5rem; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    input, select, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+    }
+    select option { background: var(--surface); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0.75rem 1.4rem;
+      border-radius: 8px;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #0090a8);
+      color: #000;
+      width: 100%;
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: var(--glow); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-sm {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── BLOCKCHAIN VISUAL ── */
+    #chain-visual {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    #chain-visual::-webkit-scrollbar { width: 4px; }
+    #chain-visual::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .block-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      position: relative;
+      animation: blockIn 0.4s ease both;
+      transition: border-color 0.2s;
+    }
+    .block-card:hover { border-color: var(--accent); }
+    @keyframes blockIn {
+      from { opacity: 0; transform: scale(0.97) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .block-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+    }
+    .block-connector::before {
+      content: '';
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--accent2), var(--accent));
+    }
+
+    .block-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.7rem;
+    }
+    .block-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: rgba(0,229,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .block-time {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .block-product { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+    .block-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 0.6rem;
+    }
+
+    .status-manufactured  { background: rgba(124,58,237,0.15); color: #a78bfa; }
+    .status-in-transit    { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .status-at-warehouse  { background: rgba(0,229,255,0.12); color: var(--accent); }
+    .status-quality-check { background: rgba(16,185,129,0.12); color: var(--accent3); }
+    .status-delivered     { background: rgba(16,185,129,0.2);  color: var(--accent3); }
+    .status-recalled      { background: rgba(239,68,68,0.15);  color: var(--danger); }
+
+    .block-hash {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      word-break: break-all;
+      border-top: 1px solid var(--border);
+      padding-top: 0.5rem;
+      margin-top: 0.4rem;
+    }
+    .block-hash span { color: var(--accent2); }
+
+    .block-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-bottom: 0.5rem;
+    }
+    .meta-item { font-size: 0.72rem; color: var(--muted); }
+    .meta-item strong { color: var(--text); font-weight: 600; }
+
+    /* ── SIDEBAR PANELS ── */
+    .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* ── SEARCH ── */
+    .search-wrap { padding: 1.2rem 1.5rem; }
+    .search-box {
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      padding-left: 2.4rem;
+    }
+    .search-icon {
+      position: absolute;
+      left: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* ── PRODUCT DETAIL ── */
+    #detail-panel { padding: 1.2rem 1.5rem; }
+    .detail-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 2rem 0;
+    }
+    .detail-empty .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 1rem;
+      position: relative;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 24px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+    .timeline-item:last-child::before { display: none; }
+    .tl-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--accent2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem;
+      flex-shrink: 0;
+    }
+    .tl-content {}
+    .tl-event { font-size: 0.82rem; font-weight: 600; }
+    .tl-time  { font-family: 'Space Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+    .tl-loc   { font-size: 0.72rem; color: var(--muted); }
+
+    /* ── HASH BADGE ── */
+    .hash-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      background: rgba(124,58,237,0.1);
+      border: 1px solid rgba(124,58,237,0.3);
+      color: #a78bfa;
+      padding: 4px 8px;
+      border-radius: 6px;
+      word-break: break-all;
+      margin-top: 6px;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--card);
+      border: 1px solid var(--accent3);
+      border-radius: 10px;
+      padding: 0.9rem 1.4rem;
+      font-size: 0.85rem;
+      color: var(--accent3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      box-shadow: var(--glow);
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+    .tab {
+      padding: 0.8rem 1.2rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── GENESIS BLOCK ── */
+    .genesis-block {
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,229,255,0.05));
+      border-color: rgba(124,58,237,0.4) !important;
+    }
+
+    /* ── VERIFY BADGE ── */
+    .verify-ok {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; color: var(--accent3);
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      padding: 3px 10px; border-radius: 20px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .stats-bar { grid-template-columns: 1fr 1fr; }
+      .main-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 500px) {
+      .stats-bar { grid-template-columns: 1fr; }
+      .form-row  { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Welcome to ChainTrack</h1>
-    </header>
-    <main>
-        <section id="blockchain-functionality">
-            <h2>Blockchain Functionality</h2>
-            <p>This section will integrate with the blockchain for supply chain tracking.</p>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2026 ChainTrack. All rights reserved.</p>
-    </footer>
-    <script src="blockchain.js"></script>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⛓</div>
+    Chain<span>Track</span>
+  </div>
+  <div class="chain-status">
+    <div class="dot"></div>
+    <span id="node-count">Node 1 of 3 Active</span>
+    &nbsp;|&nbsp;
+    <span id="block-count-hdr">0 Blocks</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card" style="animation-delay:0.05s">
+      <div class="stat-label">Total Blocks</div>
+      <div class="stat-value" id="s-blocks">1</div>
+      <div class="stat-sub">Genesis + records</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.1s">
+      <div class="stat-label">Products Tracked</div>
+      <div class="stat-value" id="s-products">0</div>
+      <div class="stat-sub">Unique SKUs</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.15s">
+      <div class="stat-label">Chain Integrity</div>
+      <div class="stat-value" id="s-integrity" style="color:var(--accent3)">✓ Valid</div>
+      <div class="stat-sub">All hashes match</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.2s">
+      <div class="stat-label">Avg Block Time</div>
+      <div class="stat-value" id="s-time">—</div>
+      <div class="stat-sub">Simulated PoW</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: Blockchain + Add Form -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+      <!-- ADD RECORD PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⊕ Add Supply Chain Event</div>
+          <button class="btn btn-sm" onclick="loadDemo()">Load Demo Data</button>
+        </div>
+        <div class="form-section">
+          <div class="tabs">
+            <div class="tab active" onclick="switchTab('product')">Product</div>
+            <div class="tab" onclick="switchTab('shipment')">Shipment</div>
+            <div class="tab" onclick="switchTab('quality')">Quality</div>
+          </div>
+
+          <!-- PRODUCT TAB -->
+          <div id="tab-product" class="tab-content active" style="padding-top:1rem;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Product ID / SKU</label>
+                <input id="f-sku" placeholder="SKU-001" />
+              </div>
+              <div class="form-group">
+                <label>Product Name</label>
+                <input id="f-name" placeholder="Organic Coffee Beans" />
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select id="f-status">
+                  <option value="manufactured">🏭 Manufactured</option>
+                  <option value="in-transit">🚢 In Transit</option>
+                  <option value="at-warehouse">🏢 At Warehouse</option>
+                  <option value="quality-check">🔬 Quality Check</option>
+                  <option value="delivered">✅ Delivered</option>
+                  <option value="recalled">⚠️ Recalled</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Quantity</label>
+                <input id="f-qty" placeholder="500 kg" />
+              </div>
+              <div class="form-group">
+                <label>Origin Location</label>
+                <input id="f-origin" placeholder="Medellín, Colombia" />
+              </div>
+              <div class="form-group">
+                <label>Destination</label>
+                <input id="f-dest" placeholder="Hamburg, Germany" />
+              </div>
+              <div class="form-group">
+                <label>Handler / Company</label>
+                <input id="f-handler" placeholder="CaféExport S.A." />
+              </div>
+              <div class="form-group">
+                <label>Temperature (°C)</label>
+                <input id="f-temp" placeholder="18" type="number" />
+              </div>
+              <div class="form-group full">
+                <label>Notes</label>
+                <textarea id="f-notes" placeholder="Certifications, batch info, anomalies…"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="addBlock()">⛓ Add Block to Chain</button>
+          </div>
+
+          <!-- SHIPMENT TAB -->
+          <div id="tab-shipment" class="tab-content" style="padding-top:1rem;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tracking / Bill of Lading</label>
+                <input id="s-bol" placeholder="BOL-2024-9921" />
+              </div>
+              <div class="form-group">
+                <label>Carrier</label>
+                <input id="s-carrier" placeholder="Maersk Line" />
+              </div>
+              <div class="form-group">
+                <label>Container ID</label>
+                <input id="s-container" placeholder="MSKU123456" />
+              </div>
+              <div class="form-group">
+                <label>Port of Loading</label>
+                <input id="s-pol" placeholder="Cartagena, COL" />
+              </div>
+              <div class="form-group">
+                <label>Port of Discharge</label>
+                <input id="s-pod" placeholder="Rotterdam, NLD" />
+              </div>
+              <div class="form-group">
+                <label>ETA</label>
+                <input id="s-eta" type="date" />
+              </div>
+              <div class="form-group full">
+                <label>Cargo Description</label>
+                <textarea id="s-cargo" placeholder="Commodity details, HS code, declared value…"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="addShipmentBlock()">⛓ Add Shipment Block</button>
+          </div>
+
+          <!-- QUALITY TAB -->
+          <div id="tab-quality" class="tab-content" style="padding-top:1rem;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Product SKU</label>
+                <input id="q-sku" placeholder="SKU-001" />
+              </div>
+              <div class="form-group">
+                <label>Inspector</label>
+                <input id="q-inspector" placeholder="Dr. Elena Vasquez" />
+              </div>
+              <div class="form-group">
+                <label>Result</label>
+                <select id="q-result">
+                  <option value="passed">✅ Passed</option>
+                  <option value="failed">❌ Failed</option>
+                  <option value="conditional">⚠️ Conditional</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Score (0-100)</label>
+                <input id="q-score" type="number" min="0" max="100" placeholder="97" />
+              </div>
+              <div class="form-group full">
+                <label>Findings</label>
+                <textarea id="q-findings" placeholder="Moisture content 11.2%, no contaminants detected…"></textarea>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="addQualityBlock()">⛓ Add QC Block</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCKCHAIN PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⛓ Blockchain Ledger</div>
+          <div class="verify-ok" id="chain-valid-badge">✓ Chain Valid</div>
+        </div>
+        <div id="chain-visual"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Sidebar -->
+    <div class="sidebar">
+
+      <!-- SEARCH -->
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🔍 Track Product</div></div>
+        <div class="search-wrap">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input id="search-input" placeholder="Search SKU, product, location…" oninput="doSearch()" />
+          </div>
+          <div id="search-results" style="margin-top:1rem;"></div>
+        </div>
+      </div>
+
+      <!-- DETAIL -->
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">📦 Product Journey</div></div>
+        <div id="detail-panel">
+          <div class="detail-empty">
+            <div class="icon">📦</div>
+            <div>Search or click a block to view full product journey</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HASH VERIFY -->
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🔐 Hash Verifier</div></div>
+        <div style="padding:1.2rem 1.5rem;">
+          <div class="form-group" style="margin-bottom:0.8rem;">
+            <label>Paste Block Hash</label>
+            <input id="verify-input" placeholder="0x4a3f…" />
+          </div>
+          <button class="btn btn-primary" onclick="verifyHash()" style="margin-bottom:0.8rem;">Verify</button>
+          <div id="verify-result"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="blockchain.js"></script>
+<script>
+  // init
+  window.addEventListener('DOMContentLoaded', () => {
+    initChain();
+    renderChain();
+  });
+</script>
 </body>
 </html>
