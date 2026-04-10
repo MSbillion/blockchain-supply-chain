@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blockchain Supply Chain AI Tracker</title>
+<style>
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --surface2: #f1efe8;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.25);
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #888780;
+    --blue50: #e6f1fb; --blue200: #85b7eb; --blue600: #185fa5; --blue800: #0c447c;
+    --teal50: #e1f5ee; --teal200: #5dcaa5; --teal600: #0f6e56; --teal800: #085041;
+    --amber50: #faeeda; --amber200: #ef9f27; --amber600: #854f0b; --amber800: #633806;
+    --red50: #fcebeb; --red200: #f09595; --red600: #a32d2d; --red800: #791f1f;
+    --green50: #eaf3de; --green600: #3b6d11; --green800: #27500a;
+    --purple50: #eeedfe; --purple600: #534ab7; --purple800: #3c3489;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c; --surface: #2c2c2a; --surface2: #222220;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --text: #f1efe8; --text2: #b4b2a9; --text3: #888780;
+      --blue50: #042c53; --blue200: #0c447c; --blue600: #85b7eb; --blue800: #b5d4f4;
+      --teal50: #04342c; --teal200: #085041; --teal600: #5dcaa5; --teal800: #9fe1cb;
+      --amber50: #412402; --amber200: #633806; --amber600: #ef9f27; --amber800: #fac775;
+      --red50: #501313; --red200: #791f1f; --red600: #f09595; --red800: #f7c1c1;
+      --green50: #173404; --green600: #97c459; --green800: #c0dd97;
+      --purple50: #26215c; --purple600: #afa9ec; --purple800: #cecbf6;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+  header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; font-weight: 500; }
+  header .badge { font-size: 11px; background: var(--purple50); color: var(--purple600); border-radius: 4px; padding: 3px 8px; font-weight: 500; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; height: calc(100vh - 49px); }
+  .sidebar { background: var(--surface); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .main { overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .panel-header { padding: 14px 16px 10px; border-bottom: 0.5px solid var(--border); }
+  .panel-header h2 { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tab-bar { display: flex; border-bottom: 0.5px solid var(--border); }
+  .tab { flex: 1; padding: 9px 6px; font-size: 12px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: var(--blue600); border-bottom-color: var(--blue600); }
+  .tab-content { flex: 1; overflow-y: auto; }
+  .shipment-item { padding: 10px 14px; border-bottom: 0.5px solid var(--border); cursor: pointer; transition: background 0.1s; }
+  .shipment-item:hover, .shipment-item.selected { background: var(--surface2); }
+  .shipment-item .row { display: flex; justify-content: space-between; align-items: center; }
+  .shipment-item .id { font-size: 12px; font-weight: 500; font-family: monospace; }
+  .risk-badge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 3px; }
+  .risk-low { background: var(--green50); color: var(--green600); }
+  .risk-med { background: var(--amber50); color: var(--amber600); }
+  .risk-high { background: var(--red50); color: var(--red600); }
+  .risk-anomaly { background: var(--red50); color: var(--red600); border: 1px solid var(--red600); }
+  .shipment-item .meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card h3 { font-size: 13px; font-weight: 500; margin-bottom: 12px; color: var(--text2); }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .metric { background: var(--surface2); border-radius: 8px; padding: 12px; }
+  .metric .label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+  .metric .value { font-size: 22px; font-weight: 500; }
+  .metric .value.danger { color: var(--red600); }
+  .metric .value.warn { color: var(--amber600); }
+  .metric .value.ok { color: var(--teal600); }
+  .blockchain { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; align-items: center; }
+  .block { background: var(--surface2); border: 0.5px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 130px; flex-shrink: 0; }
+  .block .hash { font-size: 10px; font-family: monospace; color: var(--text3); }
+  .block .bdata { font-size: 11px; margin-top: 4px; font-weight: 500; }
+  .block .btime { font-size: 10px; color: var(--text3); }
+  .block-arrow { color: var(--text3); font-size: 16px; flex-shrink: 0; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .detail-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 0.5px solid var(--border); font-size: 12px; }
+  .detail-row .key { color: var(--text2); }
+  .detail-row .val { font-weight: 500; }
+  .ai-section { background: var(--surface); border: 0.5px solid var(--border); border-radius: 10px; padding: 16px; }
+  .ai-section h3 { font-size: 13px; font-weight: 500; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .ai-tag { font-size: 10px; background: var(--purple50); color: var(--purple600); border-radius: 3px; padding: 2px 6px; font-weight: 500; }
+  .score-bar { height: 8px; border-radius: 4px; background: var(--border); margin: 4px 0 8px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+  .factor-row { display: flex; align-items: center; gap: 8px; font-size: 11px; margin: 4px 0; }
+  .factor-label { width: 140px; color: var(--text2); flex-shrink: 0; }
+  .factor-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .factor-fill { height: 100%; border-radius: 3px; }
+  .factor-val { width: 30px; text-align: right; color: var(--text3); flex-shrink: 0; }
+  .astar-path { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .path-node { background: var(--blue50); color: var(--blue800); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 500; }
+  .path-arrow { color: var(--text3); font-size: 12px; }
+  .path-cost { font-size: 11px; color: var(--text2); }
+  canvas { max-width: 100%; }
+  .add-form { padding: 12px 14px; border-top: 0.5px solid var(--border); }
+  .add-form h4 { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+  .form-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  .form-row input, .form-row select { flex: 1; background: var(--surface2); border: 0.5px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--text); outline: none; }
+  .form-row input:focus, .form-row select:focus { border-color: var(--blue600); }
+  .btn { padding: 6px 14px; border-radius: 6px; border: 0.5px solid var(--border2); background: var(--surface); color: var(--text); font-size: 12px; cursor: pointer; font-weight: 500; transition: all 0.1s; }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary { background: var(--blue600); border-color: var(--blue600); color: #fff; }
+  .btn-primary:hover { opacity: 0.88; background: var(--blue600); }
+  .alert-box { border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 4px; }
+  .alert-high { background: var(--red50); color: var(--red800); border: 0.5px solid var(--red600); }
+  .alert-med { background: var(--amber50); color: var(--amber800); border: 0.5px solid var(--amber600); }
+  .alert-info { background: var(--blue50); color: var(--blue800); border: 0.5px solid var(--blue600); }
+  .isolation-viz { width: 100%; height: 180px; }
+  .legend { display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .empty-state { padding: 24px 14px; text-align: center; color: var(--text3); font-size: 12px; }
+  .if-explain { font-size: 11px; color: var(--text2); line-height: 1.6; }
+  .tab-pane { display: none; padding: 10px 14px; }
+  .tab-pane.active { display: block; }
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; }
+    .sidebar { height: 50vh; border-right: none; border-bottom: 0.5px solid var(--border); }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Blockchain Supply Chain Tracker</h1>
+  <span class="badge">AI Anomaly Detection</span>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="tab-bar">
+      <div class="tab active" onclick="showTab('shipments',this)">Shipments</div>
+      <div class="tab" onclick="showTab('alerts',this)">Alerts</div>
+      <div class="tab" onclick="showTab('add',this)">+ Add</div>
+    </div>
+    <div class="tab-content">
+      <div id="tab-shipments" class="tab-pane active">
+        <div id="shipment-list"></div>
+      </div>
+      <div id="tab-alerts" class="tab-pane">
+        <div id="alert-list" style="padding: 10px 14px;"></div>
+      </div>
+      <div id="tab-add" class="tab-pane">
+        <p style="font-size:12px; color:var(--text2); margin-bottom:10px;">Add a new shipment to the blockchain and run AI analysis.</p>
+        <div class="form-row">
+          <input id="f-origin" placeholder="Origin (e.g. Vilnius)" />
+          <input id="f-dest" placeholder="Destination (e.g. Berlin)" />
+        </div>
+        <div class="form-row">
+          <input id="f-weight" type="number" placeholder="Weight (kg)" />
+          <input id="f-value" type="number" placeholder="Value (EUR)" />
+        </div>
+        <div class="form-row">
+          <input id="f-temp" type="number" placeholder="Temp (°C)" />
+          <select id="f-category">
+            <option value="">Category</option>
+            <option>Pharmaceuticals</option>
+            <option>Electronics</option>
+            <option>Food</option>
+            <option>Chemicals</option>
+            <option>Automotive</option>
+            <option>Textiles</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input id="f-transit" type="number" placeholder="Transit days" />
+          <input id="f-stops" type="number" placeholder="# of stops" />
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" style="width:100%" onclick="addShipment()">Add to Blockchain + Analyse</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="metrics">
+      <div class="metric"><div class="label">Total shipments</div><div class="value" id="m-total">0</div></div>
+      <div class="metric"><div class="label">Anomalies detected</div><div class="value danger" id="m-anomalies">0</div></div>
+      <div class="metric"><div class="label">High risk</div><div class="value warn" id="m-highrisk">0</div></div>
+      <div class="metric"><div class="label">Avg risk score</div><div class="value ok" id="m-avgrisk">—</div></div>
+    </div>
+
+    <div class="card" id="detail-panel" style="display:none">
+      <h3 id="detail-title">Shipment detail</h3>
+      <div id="detail-body"></div>
+    </div>
+
+    <div class="ai-section" id="ai-panel" style="display:none">
+      <h3><span class="ai-tag">AI</span> Isolation Forest — Anomaly Analysis</h3>
+      <div id="ai-body"></div>
+    </div>
+
+    <div class="ai-section" id="astar-panel" style="display:none">
+      <h3><span class="ai-tag">AI</span> A* Optimal Route Finder</h3>
+      <div id="astar-body"></div>
+    </div>
+
+    <div class="card">
+      <h3>Blockchain ledger (last 8 blocks)</h3>
+      <div class="blockchain" id="blockchain-viz"></div>
+    </div>
+
+    <div class="card">
+      <h3>Anomaly score distribution <span style="font-size:11px;color:var(--text3);font-weight:400;">(Isolation Forest)</span></h3>
+      <canvas id="score-chart" height="120"></canvas>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#185fa5"></div>Normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef9f27"></div>Elevated risk</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e24b4a"></div>Anomaly</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>How the AI works</h3>
+      <div class="if-explain">
+        <b>Isolation Forest (from scratch, pure JS)</b>: Each shipment is described as a feature vector: [weight, value, transit_days, temperature, stops, value_per_kg, delay_ratio]. The algorithm builds an ensemble of random isolation trees. Each tree recursively partitions the feature space by picking random attributes and random split thresholds. Anomalies — points that are statistically rare or extreme — get isolated in fewer splits (shorter path length). The anomaly score is computed from the average path length across all trees, normalised to [0,1] where scores above <b>0.62</b> indicate anomalies.<br><br>
+        <b>A* Route Optimisation</b>: A weighted supply-chain graph connects major logistics hubs. A* uses a combined cost function f(n) = g(n) + h(n) where g(n) is actual cost (distance + risk penalty + congestion) and h(n) is the admissible heuristic (Euclidean distance to goal). It finds the lowest-risk, lowest-cost route for each shipment's origin-destination pair.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const HUBS = {
+  Vilnius:    { x: 530, y: 145, lat: 54.7, lng: 25.3 },
+  Warsaw:     { x: 490, y: 170, lat: 52.2, lng: 21.0 },
+  Berlin:     { x: 430, y: 185, lat: 52.5, lng: 13.4 },
+  Hamburg:    { x: 410, y: 160, lat: 53.6, lng: 10.0 },
+  Frankfurt:  { x: 420, y: 210, lat: 50.1, lng: 8.7 },
+  Amsterdam:  { x: 385, y: 175, lat: 52.4, lng: 4.9 },
+  Paris:      { x: 370, y: 220, lat: 48.9, lng: 2.3 },
+  Riga:       { x: 530, y: 120, lat: 56.9, lng: 24.1 },
+  Tallinn:    { x: 530, y: 95,  lat: 59.4, lng: 24.7 },
+  Helsinki:   { x: 545, y: 70,  lat: 60.2, lng: 25.0 },
+  Prague:     { x: 465, y: 205, lat: 50.1, lng: 14.4 },
+  Vienna:     { x: 470, y: 235, lat: 48.2, lng: 16.4 },
+  Zurich:     { x: 420, y: 245, lat: 47.4, lng: 8.5 },
+  Milan:      { x: 435, y: 270, lat: 45.5, lng: 9.2 },
+  Copenhagen: { x: 435, y: 140, lat: 55.7, lng: 12.6 },
+  Stockholm:  { x: 460, y: 105, lat: 59.3, lng: 18.1 },
+  Kaunas:     { x: 515, y: 155, lat: 54.9, lng: 23.9 },
+  Gdansk:     { x: 490, y: 150, lat: 54.4, lng: 18.6 },
+};
+const EDGES = [
+  ['Vilnius','Riga',1.1],['Vilnius','Warsaw',1.4],['Vilnius','Kaunas',0.5],['Vilnius','Gdansk',1.8],
+  ['Riga','Tallinn',1.1],['Riga','Helsinki',2.0],['Riga','Stockholm',2.2],
+  ['Tallinn','Helsinki',0.9],['Helsinki','Stockholm',1.8],['Stockholm','Copenhagen',1.5],
+  ['Copenhagen','Hamburg',1.3],['Copenhagen','Berlin',1.6],['Gdansk','Warsaw',1.1],
+  ['Gdansk','Berlin',1.5],['Gdansk','Hamburg',1.8],['Warsaw','Berlin',1.7],
+  ['Warsaw','Prague',1.5],['Warsaw','Vienna',2.0],['Berlin','Hamburg',0.9],
+  ['Berlin','Frankfurt',1.5],['Berlin','Prague',1.1],['Hamburg','Amsterdam',1.4],
+  ['Hamburg','Frankfurt',1.6],['Frankfurt','Amsterdam',1.1],['Frankfurt','Paris',1.5],
+  ['Frankfurt','Zurich',1.2],['Frankfurt','Vienna',1.6],['Amsterdam','Paris',1.2],
+  ['Paris','Zurich',1.4],['Paris','Milan',2.0],['Zurich','Milan',1.1],
+  ['Zurich','Vienna',1.5],['Vienna','Milan',1.8],['Prague','Vienna',1.1],
+  ['Kaunas','Warsaw',1.2],['Kaunas','Gdansk',1.6],
+];
+
+function dist(a, b) {
+  const ha = HUBS[a], hb = HUBS[b];
+  if (!ha || !hb) return 999;
+  return Math.sqrt((ha.lat-hb.lat)**2 + (ha.lng-hb.lng)**2);
+}
+
+function astar(start, goal) {
+  if (!HUBS[start] || !HUBS[goal]) return null;
+  const graph = {};
+  HUBS && Object.keys(HUBS).forEach(h => graph[h] = []);
+  EDGES.forEach(([a,b,w]) => { graph[a].push([b,w]); graph[b].push([a,w]); });
+  const open = new Map([[start, { g: 0, f: dist(start, goal), prev: null }]]);
+  const closed = new Set();
+  let iterations = 0;
+  while (open.size > 0 && iterations++ < 1000) {
+    let cur = null, best = Infinity;
+    open.forEach((v, k) => { if (v.f < best) { best = v.f; cur = k; } });
+    if (cur === goal) {
+      const path = []; let node = cur;
+      const parents = {};
+      open.forEach((v, k) => { if (v.prev) parents[k] = v.prev; });
+      const closedParents = {};
+      while (node) { path.unshift(node); node = closedParents[node] || parents[node]; }
+      return { path, cost: open.get(cur) ? open.get(cur).g : best };
+    }
+    const cur_data = open.get(cur);
+    open.delete(cur); closed.add(cur);
+    const closedData = {};
+    closedData[cur] = cur_data;
+    (graph[cur] || []).forEach(([nb, w]) => {
+      if (closed.has(nb)) return;
+      const ng = cur_data.g + w;
+      if (!open.has(nb) || ng < open.get(nb).g) {
+        open.set(nb, { g: ng, f: ng + dist(nb, goal), prev: cur });
+      }
+    });
+  }
+  return null;
+}
+
+class IsolationTree {
+  constructor(maxDepth) { this.maxDepth = maxDepth; this.root = null; }
+  build(data, depth=0) {
+    if (depth >= this.maxDepth || data.length <= 1) return { isLeaf: true, size: data.length };
+    const feat = Math.floor(Math.random() * data[0].length);
+    const vals = data.map(d => d[feat]);
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    if (mn === mx) return { isLeaf: true, size: data.length };
+    const split = mn + Math.random() * (mx - mn);
+    const left = data.filter(d => d[feat] < split);
+    const right = data.filter(d => d[feat] >= split);
+    return {
+      isLeaf: false, feat, split,
+      left: this.build(left, depth+1),
+      right: this.build(right, depth+1)
+    };
+  }
+  pathLen(node, point, depth=0) {
+    if (!node || node.isLeaf) {
+      const s = node ? node.size : 1;
+      return depth + (s > 1 ? 2*(Math.log(s-1)+0.5772) - 2*(s-1)/s : 0);
+    }
+    if (point[node.feat] < node.split) return this.pathLen(node.left, point, depth+1);
+    return this.pathLen(node.right, point, depth+1);
+  }
+}
+
+class IsolationForest {
+  constructor(nTrees=100, sampleSize=32) {
+    this.nTrees = nTrees; this.sampleSize = sampleSize; this.trees = [];
+  }
+  fit(data) {
+    this.data = data;
+    const depth = Math.ceil(Math.log2(this.sampleSize));
+    this.trees = [];
+    for (let i = 0; i < this.nTrees; i++) {
+      const sample = [];
+      for (let j = 0; j < Math.min(this.sampleSize, data.length); j++) {
+        sample.push(data[Math.floor(Math.random() * data.length)]);
+      }
+      const t = new IsolationTree(depth);
+      t.root = t.build(sample);
+      this.trees.push(t);
+    }
+  }
+  score(point) {
+    if (this.trees.length === 0) return 0.5;
+    const avgPath = this.trees.reduce((s,t) => s + t.pathLen(t.root, point), 0) / this.trees.length;
+    const c = n => n <= 1 ? 0 : 2*(Math.log(n-1)+0.5772) - 2*(n-1)/n;
+    const norm = c(Math.min(this.sampleSize, this.data.length));
+    return norm > 0 ? Math.pow(2, -avgPath/norm) : 0.5;
+  }
+}
+
+function toFeature(s) {
+  return [
+    s.weight/1000,
+    s.value/10000,
+    s.transitDays/30,
+    (s.temperature+20)/60,
+    s.stops/10,
+    s.value > 0 ? (s.value/Math.max(s.weight,1))/100 : 0,
+    s.transitDays > 0 ? s.stops/s.transitDays : 0,
+  ];
+}
+
+function riskScore(s, anomalyScore) {
+  let score = 0;
+  if (anomalyScore > 0.62) score += 40;
+  else if (anomalyScore > 0.52) score += 20;
+  if (s.temperature < -15 || s.temperature > 35) score += 15;
+  if (s.stops > 6) score += 10;
+  if (s.stops > 3) score += 5;
+  if (s.value > 50000) score += 10;
+  if (s.transitDays > 20) score += 10;
+  if (s.weight > 5000) score += 5;
+  return Math.min(100, score);
+}
+
+const iforest = new IsolationForest(80, 32);
+let shipments = [];
+let selectedId = null;
+let blockCounter = 1;
+
+const SAMPLE_DATA = [
+  { id:'SC-0001', origin:'Vilnius', dest:'Berlin', weight:420, value:8200, temperature:4, transitDays:3, stops:2, category:'Pharmaceuticals', ts: Date.now()-86400000*5 },
+  { id:'SC-0002', origin:'Riga', dest:'Frankfurt', weight:1200, value:15000, temperature:20, transitDays:5, stops:3, category:'Electronics', ts: Date.now()-86400000*4 },
+  { id:'SC-0003', origin:'Warsaw', dest:'Paris', weight:800, value:6000, temperature:8, transitDays:4, stops:2, category:'Food', ts: Date.now()-86400000*4 },
+  { id:'SC-0004', origin:'Vilnius', dest:'Amsterdam', weight:350, value:42000, temperature:18, transitDays:3, stops:2, category:'Electronics', ts: Date.now()-86400000*3 },
+  { id:'SC-0005', origin:'Kaunas', dest:'Hamburg', weight:2800, value:9500, temperature:15, transitDays:6, stops:4, category:'Automotive', ts: Date.now()-86400000*3 },
+  { id:'SC-0006', origin:'Tallinn', dest:'Zurich', weight:90, value:95000, temperature:2, transitDays:2, stops:1, category:'Pharmaceuticals', ts: Date.now()-86400000*2 },
+  { id:'SC-0007', origin:'Helsinki', dest:'Milan', weight:4200, value:3200, temperature:22, transitDays:14, stops:8, category:'Textiles', ts: Date.now()-86400000*2 },
+  { id:'SC-0008', origin:'Gdansk', dest:'Vienna', weight:660, value:12000, temperature:6, transitDays:4, stops:3, category:'Chemicals', ts: Date.now()-86400000*1 },
+  { id:'SC-0009', origin:'Stockholm', dest:'Prague', weight:75, value:88000, temperature:-5, transitDays:1, stops:0, category:'Electronics', ts: Date.now()-86400000*1 },
+  { id:'SC-0010', origin:'Berlin', dest:'Vilnius', weight:6200, value:1800, temperature:38, transitDays:22, stops:9, category:'Chemicals', ts: Date.now()-3600000 },
+];
+
+function hashBlock(prev, data) {
+  let h = 0;
+  const str = prev + JSON.stringify(data);
+  for (let i=0; i<str.length; i++) h = ((h<<5)-h+str.charCodeAt(i))|0;
+  return (h >>> 0).toString(16).padStart(8,'0');
+}
+
+function analyse() {
+  if (shipments.length < 2) { shipments.forEach(s => { s.anomalyScore = 0.5; s.riskScore = 20; s.riskLevel = 'low'; }); return; }
+  const features = shipments.map(toFeature);
+  iforest.fit(features);
+  shipments.forEach((s, i) => {
+    s.anomalyScore = iforest.score(features[i]);
+    s.riskScore = riskScore(s, s.anomalyScore);
+    s.riskLevel = s.anomalyScore > 0.62 ? 'anomaly' : s.riskScore >= 50 ? 'high' : s.riskScore >= 25 ? 'med' : 'low';
+  });
+}
+
+function addShipment() {
+  const origin = document.getElementById('f-origin').value.trim() || 'Vilnius';
+  const dest = document.getElementById('f-dest').value.trim() || 'Berlin';
+  const weight = parseFloat(document.getElementById('f-weight').value) || 500;
+  const value = parseFloat(document.getElementById('f-value').value) || 5000;
+  const temp = parseFloat(document.getElementById('f-temp').value) || 20;
+  const cat = document.getElementById('f-category').value || 'General';
+  const transit = parseInt(document.getElementById('f-transit').value) || 3;
+  const stops = parseInt(document.getElementById('f-stops').value) || 2;
+  const id = 'SC-' + String(shipments.length+1).padStart(4,'0');
+  shipments.push({ id, origin, dest, weight, value, temperature: temp, transitDays: transit, stops, category: cat, ts: Date.now() });
+  analyse();
+  render();
+  showTab('shipments', document.querySelector('.tab'));
+}
+
+function render() {
+  analyse();
+  renderList();
+  renderMetrics();
+  renderBlockchain();
+  renderChart();
+  if (selectedId) showDetail(selectedId);
+  renderAlerts();
+}
+
+function renderList() {
+  const el = document.getElementById('shipment-list');
+  if (!shipments.length) { el.innerHTML = '<div class="empty-state">No shipments yet.</div>'; return; }
+  el.innerHTML = [...shipments].reverse().map(s => {
+    const badge = s.riskLevel === 'anomaly' ? '<span class="risk-badge risk-anomaly">ANOMALY</span>' :
+      s.riskLevel === 'high' ? '<span class="risk-badge risk-high">HIGH</span>' :
+      s.riskLevel === 'med' ? '<span class="risk-badge risk-med">MED</span>' :
+      '<span class="risk-badge risk-low">LOW</span>';
+    return `<div class="shipment-item ${s.id===selectedId?'selected':''}" onclick="showDetail('${s.id}')">
+      <div class="row"><span class="id">${s.id}</span>${badge}</div>
+      <div class="meta">${s.origin} → ${s.dest} &nbsp;|&nbsp; ${s.category}</div>
+      <div class="meta">Risk: ${s.riskScore}% &nbsp;|&nbsp; Score: ${s.anomalyScore!=null?s.anomalyScore.toFixed(3):'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMetrics() {
+  document.getElementById('m-total').textContent = shipments.length;
+  document.getElementById('m-anomalies').textContent = shipments.filter(s=>s.riskLevel==='anomaly').length;
+  document.getElementById('m-highrisk').textContent = shipments.filter(s=>s.riskLevel==='high'||s.riskLevel==='anomaly').length;
+  const avg = shipments.length ? shipments.reduce((a,s)=>a+(s.riskScore||0),0)/shipments.length : 0;
+  document.getElementById('m-avgrisk').textContent = avg ? avg.toFixed(0)+'%' : '—';
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alert-list');
+  const anomalies = shipments.filter(s=>s.riskLevel==='anomaly'||s.riskLevel==='high');
+  if (!anomalies.length) { el.innerHTML = '<div class="empty-state">No alerts at this time.</div>'; return; }
+  el.innerHTML = anomalies.map(s => {
+    const cls = s.riskLevel==='anomaly' ? 'alert-high' : 'alert-med';
+    return `<div class="alert-box ${cls}" onclick="showDetail('${s.id}')" style="cursor:pointer;margin-bottom:8px">
+      <b>${s.id}</b>: ${s.riskLevel==='anomaly'?'ANOMALY DETECTED':'HIGH RISK'}<br>
+      ${s.origin} → ${s.dest} | Score: ${s.anomalyScore!=null?s.anomalyScore.toFixed(3):'—'} | Risk: ${s.riskScore}%
+    </div>`;
+  }).join('');
+}
+
+let prevHash = '00000000';
+function renderBlockchain() {
+  const el = document.getElementById('blockchain-viz');
+  const last8 = shipments.slice(-8);
+  if (!last8.length) { el.innerHTML = '<span style="color:var(--text3);font-size:12px">No blocks yet</span>'; return; }
+  let html = '';
+  let ph = '00000000';
+  last8.forEach((s, i) => {
+    const h = hashBlock(ph, s);
+    ph = h;
+    const rColor = s.riskLevel==='anomaly' ? 'var(--red600)' : s.riskLevel==='high' ? 'var(--amber600)' : 'var(--teal600)';
+    html += `<div class="block" style="border-left: 3px solid ${rColor}">
+      <div class="hash">#${s.id} | ${h}</div>
+      <div class="bdata">${s.origin} → ${s.dest}</div>
+      <div class="btime">${new Date(s.ts).toLocaleDateString()}</div>
+    </div>`;
+    if (i < last8.length-1) html += '<div class="block-arrow">→</div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderChart() {
+  const canvas = document.getElementById('score-chart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 600;
+  canvas.height = 120;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!shipments.length) return;
+  const w = canvas.width, h = canvas.height;
+  const pad = 30;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border') || 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 0.5;
+  [0,0.2,0.4,0.6,0.8,1.0].forEach(v => {
+    const x = pad + v*(w-2*pad);
+    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, h-16); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.font = '10px system-ui';
+    ctx.fillText(v.toFixed(1), x-6, h-4);
+  });
+  ctx.fillStyle = 'rgba(230,60,60,0.12)';
+  const anomalyX = pad + 0.62*(w-2*pad);
+  ctx.fillRect(anomalyX, 8, w-pad-anomalyX, h-24);
+  ctx.strokeStyle = 'rgba(226,75,74,0.6)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(anomalyX, 8); ctx.lineTo(anomalyX, h-16); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '9px system-ui'; ctx.fillStyle = '#e24b4a';
+  ctx.fillText('anomaly', anomalyX+3, 18);
+  shipments.forEach(s => {
+    if (s.anomalyScore == null) return;
+    const x = pad + s.anomalyScore*(w-2*pad);
+    const y = 20 + Math.random()*60;
+    const color = s.riskLevel==='anomaly' ? '#e24b4a' : s.riskLevel==='high' ? '#ef9f27' : '#185fa5';
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2);
+    ctx.fillStyle = color+'cc'; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth=1; ctx.stroke();
+  });
+}
+
+function showDetail(id) {
+  selectedId = id;
+  const s = shipments.find(x=>x.id===id);
+  if (!s) return;
+  document.getElementById('detail-panel').style.display = 'block';
+  document.getElementById('ai-panel').style.display = 'block';
+  document.getElementById('astar-panel').style.display = 'block';
+  document.getElementById('detail-title').textContent = `${s.id} — ${s.origin} → ${s.dest}`;
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-grid">
+      <div>
+        <div class="detail-row"><span class="key">Category</span><span class="val">${s.category}</span></div>
+        <div class="detail-row"><span class="key">Weight</span><span class="val">${s.weight.toLocaleString()} kg</span></div>
+        <div class="detail-row"><span class="key">Value</span><span class="val">€${s.value.toLocaleString()}</span></div>
+        <div class="detail-row"><span class="key">Temperature</span><span class="val">${s.temperature}°C</span></div>
+      </div><div>
+        <div class="detail-row"><span class="key">Transit days</span><span class="val">${s.transitDays}</span></div>
+        <div class="detail-row"><span class="key">Stops</span><span class="val">${s.stops}</span></div>
+        <div class="detail-row"><span class="key">Risk level</span><span class="val">${s.riskLevel?.toUpperCase()}</span></div>
+        <div class="detail-row"><span class="key">Date</span><span class="val">${new Date(s.ts).toLocaleDateString()}</span></div>
+      </div>
+    </div>`;
+  renderAI(s);
+  renderAstar(s);
+  document.querySelectorAll('.shipment-item').forEach(el => el.classList.toggle('selected', el.getAttribute('onclick')?.includes(id)));
+}
+
+function renderAI(s) {
+  const el = document.getElementById('ai-body');
+  if (s.anomalyScore == null) { el.innerHTML = '<p style="font-size:12px;color:var(--text3)">Need at least 2 shipments for analysis.</p>'; return; }
+  const sc = s.anomalyScore;
+  const pct = Math.round(sc*100);
+  const color = sc > 0.62 ? '#e24b4a' : sc > 0.52 ? '#ef9f27' : '#185fa5';
+  const factors = [
+    { label: 'Isolation score', val: sc, w: sc },
+    { label: 'Temperature anomaly', val: (Math.abs(s.temperature) > 20 ? 0.8 : Math.abs(s.temperature)/25), w: null },
+    { label: 'Stop frequency', val: Math.min(1, s.stops/8), w: null },
+    { label: 'Value density', val: Math.min(1, (s.value/Math.max(s.weight,1))/200), w: null },
+    { label: 'Transit duration', val: Math.min(1, s.transitDays/25), w: null },
+  ];
+  const fColor = v => v > 0.65 ? '#e24b4a' : v > 0.45 ? '#ef9f27' : '#185fa5';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <div style="font-size:28px;font-weight:500;color:${color}">${pct}</div>
+      <div>
+        <div style="font-size:12px;color:var(--text2)">Anomaly score (0–100)</div>
+        <div style="font-size:11px;color:${color}">${sc>0.62?'ANOMALY DETECTED':sc>0.52?'Elevated — review':'Normal pattern'}</div>
+      </div>
+    </div>
+    <div class="score-bar"><div class="score-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div style="margin-top:12px;margin-bottom:4px;font-size:11px;font-weight:500;color:var(--text2)">Contributing factors</div>
+    ${factors.map(f=>`<div class="factor-row">
+      <span class="factor-label">${f.label}</span>
+      <div class="factor-bar"><div class="factor-fill" style="width:${Math.round(f.val*100)}%;background:${fColor(f.val)}"></div></div>
+      <span class="factor-val">${Math.round(f.val*100)}</span>
+    </div>`).join('')}
+    <div style="margin-top:12px;font-size:11px;color:var(--text3)">
+      Based on Isolation Forest ensemble (80 trees, ${Math.min(32,shipments.length)}-sample bootstrap). 
+      Feature vector: weight, value, transit days, temperature, stops, value/kg ratio, stop frequency.
+    </div>`;
+}
+
+function renderAstar(s) {
+  const el = document.getElementById('astar-body');
+  const originHub = Object.keys(HUBS).find(h => s.origin.toLowerCase().includes(h.toLowerCase()) || h.toLowerCase().includes(s.origin.toLowerCase()));
+  const destHub = Object.keys(HUBS).find(h => s.dest.toLowerCase().includes(h.toLowerCase()) || h.toLowerCase().includes(s.dest.toLowerCase()));
+  if (!originHub || !destHub) {
+    el.innerHTML = `<p style="font-size:12px;color:var(--text3)">Origin or destination not in hub network. Supported hubs: ${Object.keys(HUBS).join(', ')}</p>`;
+    return;
+  }
+  const result = astar(originHub, destHub);
+  if (!result || result.path.length < 2) {
+    el.innerHTML = `<p style="font-size:12px;color:var(--text3)">No path found between ${originHub} and ${destHub}.</p>`;
+    return;
+  }
+  const pathHtml = result.path.map(n=>`<span class="path-node">${n}</span>`).join('<span class="path-arrow">→</span>');
+  const riskPenalty = s.riskLevel==='anomaly' ? 25 : s.riskLevel==='high' ? 12 : 0;
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">
+      Optimal low-risk path from <b>${originHub}</b> to <b>${destHub}</b>:
+    </div>
+    <div class="astar-path">${pathHtml}</div>
+    <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap">
+      <div class="path-cost">Path length: <b>${result.path.length-1} hops</b></div>
+      <div class="path-cost">Base cost: <b>${result.cost.toFixed(2)}</b></div>
+      <div class="path-cost">Risk penalty: <b>+${riskPenalty}%</b></div>
+      <div class="path-cost">Total cost: <b>${(result.cost*(1+riskPenalty/100)).toFixed(2)}</b></div>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text3)">
+      f(n) = g(n) + h(n) where g = accumulated edge cost, h = Euclidean heuristic to goal. Risk penalty applied to high-risk/anomaly shipments.
+    </div>`;
+}
+
+function showTab(name, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+SAMPLE_DATA.forEach(s => shipments.push(s));
+render();
+if (shipments.length) showDetail(shipments[shipments.length-1].id);
+window.addEventListener('resize', () => renderChart());
+</script>
+</body>
+</html>
